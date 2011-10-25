@@ -6,9 +6,8 @@ import javax.servlet.http.HttpServletRequest
 
 import org.apache.commons.{fileupload => fu}
 import fu.servlet.ServletFileUpload
-import java.io.{File => JFile}
-
-/** Matches requests that have multipart content */
+import java.io.{File => JFile, ByteArrayOutputStream, InputStream}
+/** Matches requests that have  multipart content */
 object MultiPart {
   def unapply(req: HttpRequest[HttpServletRequest]) =
     if (ServletFileUpload.isMultipartContent(req.underlying))
@@ -40,8 +39,26 @@ class DiskFileWrapper(item: fu.FileItem) extends FileWrapper {
   val contentType = item.getContentType
 }
 
+/** converts an InputStream into a ByteArrayOutputStream
+ * @note can be used alongside with StreamedFileWrapper#stream
+ */
+object Pipe {
+  def apply(out: ByteArrayOutputStream)(in: InputStream) = {
+    @annotation.tailrec
+    def consume(buffer: Array[Byte]): ByteArrayOutputStream  = in.read(buffer, 0, buffer.length) match {
+      case -1 =>
+        out.flush()
+        out
+      case read =>
+         out.write(buffer, 0, read)
+         consume(buffer)
+    }
+    consume(new Array[Byte](1024*16))
+  }
+}
+
 /** Represents an uploaded file exposing a stream to read its contents */
-class StreamedFileWrapper(fstm: fu.FileItemStream) extends FileWrapper
+class StreamedFileWrapper(val underlying: fu.FileItemStream) extends FileWrapper
   with unfiltered.request.io.FileIO {
 
   def write(out: JFile): Option[JFile] = allCatch.opt {
@@ -52,9 +69,9 @@ class StreamedFileWrapper(fstm: fu.FileItemStream) extends FileWrapper
   }
 
   def stream[T]: (java.io.InputStream => T) => T =
-    MultiPartParams.Streamed.withStreamedFile[T](fstm)_
-  val name = fstm.getName
-  val contentType = fstm.getContentType
+    MultiPartParams.Streamed.withStreamedFile[T](underlying)_
+  val name = underlying.getName
+  val contentType = underlying.getContentType
 }
 
 /** Extactors for multi-part form param processing
