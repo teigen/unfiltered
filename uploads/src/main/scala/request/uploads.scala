@@ -146,12 +146,13 @@ object MultiPartParams {
   object Memory extends AbstractDisk {
 
     class ByteArrayFileItem(var fieldName: String,
-        val contentType: String,
-     	  var formField: Boolean,
-        val name: String,
-        val sizeThreshold: Int) extends fu.FileItem {
+                            val contentType: String,
+                            var formField: Boolean,
+                            val name: String,
+                            val sizeThreshold: Int)
+    extends fu.FileItem {
 
-        import java.io.{InputStream, ByteArrayInputStream,
+      import java.io.{InputStream, ByteArrayInputStream,
           OutputStream, ByteArrayOutputStream}
 
         var cache: Option[Array[Byte]] = None
@@ -179,15 +180,19 @@ object MultiPartParams {
     }
 
     class ByteArrayFileItemFactory extends fu.FileItemFactory {
-       override def createItem(fieldName: String , contentType: String ,
-    	                      isFormField: Boolean , fileName: String ) = new ByteArrayFileItem(
-    	                        fieldName, contentType, isFormField, fileName, Int.MaxValue
-    	                      )
+      override def createItem(fieldName: String,
+                              contentType: String,
+                              isFormField: Boolean,
+                              fileName: String) =
+        new ByteArrayFileItem(
+          fieldName, contentType, isFormField, fileName, Int.MaxValue
+        )
     }
 
     val memLimit = Int.MaxValue
     val tempDir = new java.io.File(".")
-    def factory(writeAfter: Int, writeDir: JFile) = new ByteArrayFileItemFactory
+    def factory(writeAfter: Int, writeDir: JFile) =
+      new ByteArrayFileItemFactory
   }
 
   /** Base trait for disk-based multi part form data extraction */

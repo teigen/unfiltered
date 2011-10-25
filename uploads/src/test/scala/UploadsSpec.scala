@@ -68,14 +68,14 @@ object UploadsSpec extends Specification with unfiltered.spec.jetty.Served {
 
   "Pipe" should {
     "convert inputStream to ByteArrayStream" in {
-    import java.io._
-    val s = "upload"
-    val in = new ByteArrayInputStream(s.getBytes())
-    val out = new ByteArrayOutputStream()
-    val res = Pipe(out)(in)
-    println(res.getClass)
-    res.toString must equalTo("upload")
-  }
+      import java.io._
+      val s = "upload"
+      val in = new ByteArrayInputStream(s.getBytes())
+      val out = new ByteArrayOutputStream()
+      val res = Pipe(out)(in)
+      println(res.getClass)
+      res.toString must equalTo("upload")
+    }
   }
   "MultiPartParams" should {
     shareVariables()
