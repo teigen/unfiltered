@@ -5,6 +5,9 @@ import unfiltered.request._
 import unfiltered.response._
 import unfiltered.request.{HttpRequest => Req}
 
+import unfiltered.Cycle.Intent
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+
 object OAuth {
   val ConsumerKey = "oauth_consumer_key"
   val SignatureMethod = "oauth_signature_method"
@@ -67,7 +70,7 @@ trait Protected extends OAuthProvider with unfiltered.filter.Plan {
   import QParams._
   import OAuth._
 
-  def intent = {
+  def intent = Intent {
     case Params(params) & request =>
       val headers = Authorization(request) match {
          case Some(a) => OAuth.Header(a.split(","))
@@ -116,7 +119,7 @@ trait OAuthed extends OAuthProvider with unfiltered.filter.Plan {
   import QParams._
   import OAuth._
 
-  def intent = {
+  def intent = Intent {
     case POST(ContextPath(_, RequestTokenPath) & Params(params)) & request =>
        val headers = Authorization(request) match {
          case Some(a) => OAuth.Header(a.split(","))

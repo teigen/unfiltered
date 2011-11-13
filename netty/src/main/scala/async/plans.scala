@@ -16,7 +16,8 @@ object Plan {
 /** Object to facilitate Plan.Intent definitions. Type annotations
  *  are another option. */
 object Intent {
-  def apply(intent: Plan.Intent) = intent
+  def apply(intent: Async.PF[ReceivedMessage, NHttpResponse]) =
+    unfiltered.Async.Intent(intent)
 }
 
 /** A Netty Plan for request-only handling. */
@@ -30,10 +31,10 @@ trait Plan extends SimpleChannelUpstreamHandler with ExceptionHandler {
     }
     val messageBinding =
       new RequestBinding(ReceivedMessage(request, ctx, e))
-    intent.orElse({ case _ => Pass }: Plan.Intent)(messageBinding) match {
-      case Pass => ctx.sendUpstream(e)
-      case _ => ()
-    }
+    intent.fold(
+      (_) => ctx.sendUpstream(e),
+      (_,_) => ()
+    )(messageBinding)
   }
 }
 

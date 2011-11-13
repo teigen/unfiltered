@@ -76,7 +76,7 @@ case class Resources(base: java.net.URL,
 
   def badRequest = passOr(BadRequest ~> PlainTextContent)_
 
-  def intent = {
+  def intent = unfiltered.netty.async.Intent {
     case Retrieval(Path(path)) & req => accessible(path.drop(1)) match {
       case Some(file) =>
         IfModifiedSince(req) match {

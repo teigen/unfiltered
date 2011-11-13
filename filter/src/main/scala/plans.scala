@@ -21,7 +21,9 @@ object Plan {
 /** Object to facilitate Plan.Intent definitions. Type annotations
  *  are another option. */
 object Intent {
-  def apply(intent: Plan.Intent) = intent
+  def apply(intent: unfiltered.Cycle.PF[HttpServletRequest,
+                                        HttpServletResponse]) =
+    unfiltered.Cycle.Intent(intent)
 }
 
 /**
@@ -36,13 +38,11 @@ trait Plan extends InittedFilter {
                chain: FilterChain) {
     (request, response) match {
       case (hreq: HttpServletRequest, hres: HttpServletResponse) =>
-        val request = new RequestBinding(hreq)
-        val response = new ResponseBinding(hres)
-        intent(request) match {
-          case Pass =>
-            chain.doFilter(request.underlying, response.underlying)
-          case responseFunction => responseFunction(response)
-        }
+        intent.fold(
+          (_) => chain.doFilter(hreq, hres),
+          (_, responseFunction) =>
+            responseFunction(new ResponseBinding(hres))
+        )(new RequestBinding(hreq))
      }
   }
 }

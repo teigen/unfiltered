@@ -16,7 +16,8 @@ object Plan {
 /** Object to facilitate Plan.Intent definitions. Type annotations
  *  are another option. */
 object Intent {
-  def apply(intent: Plan.Intent) = intent
+  def apply(intent: unfiltered.Cycle.PF[ReceivedMessage, NHttpResponse]) =
+    unfiltered.Cycle.Intent(intent)
 }
 /** A Netty Plan for request cycle handling. */
 trait Plan extends SimpleChannelUpstreamHandler with ExceptionHandler {
@@ -36,13 +37,13 @@ trait Plan extends SimpleChannelUpstreamHandler with ExceptionHandler {
       }
     }
     executeIntent { catching {
-      intent.lift(requestBinding).getOrElse(Pass) match {
-        case Pass => ctx.sendUpstream(e)
-        case responseFunction =>
+      intent.fold(
+        (_) => ctx.sendUpstream(e),
+        (_, responseFunction) =>
           executeResponse { catching {
             requestBinding.underlying.respond(responseFunction)
-          } } 
-      }
+          } }
+      )(requestBinding)
     } }
   }
   def executeIntent(thunk: => Unit)
