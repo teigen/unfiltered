@@ -38,7 +38,7 @@ trait Plan extends InittedFilter {
       case (hreq: HttpServletRequest, hres: HttpServletResponse) =>
         val request = new RequestBinding(hreq)
         val response = new ResponseBinding(hres)
-        Cycle.Intent.complete(intent)(request) match {
+        intent(request) match {
           case Pass =>
             chain.doFilter(request.underlying, response.underlying)
           case responseFunction => responseFunction(response)

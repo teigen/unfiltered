@@ -10,25 +10,29 @@ trait Prepend { self =>
   /** The produced intent is defined for all inputs, is Pass
    *  where the given intent parameter is not defined. */
   def apply[A,B](intent: unfiltered.Cycle.Intent[A,B]) = {
-    Cycle.Intent[A,B] {
-      case req =>
-        Cycle.Intent.complete(intent)(req) match {
-          case Pass => Pass
-          case rf =>
-            self.intent.lift(req).getOrElse(NoOpResponder) ~> rf
-        }
-    }
+    intent.fold(
+      (_) => Pass,
+      (req, rf) =>
+        self.intent.fold(
+          (_) => rf,
+          (_, kitRf) => kitRf ~> rf
+        )(req)
+    )
   }
   def async[A,B](intent: Async.Intent[A,B]) =
     Async.Intent[A,B] {
       case req =>
         val dreq = new DelegatingRequest(req) with Async.Responder[B] {
           def respond(rf: unfiltered.response.ResponseFunction[B]) {
-            val kitRf = self.intent.lift(req).getOrElse(NoOpResponder)
-            req.respond(kitRf ~> rf)
+            import unfiltered.PassingIntent
+            val pi = self.intent.fold[ResponseFunction[B]](
+              (_) => rf,
+              (_, kitRf) => kitRf ~> rf
+            )
+            req.respond(pi(req))
           }
         }
-        intent.lift(dreq).getOrElse(Pass)
+        intent(dreq)
     }
 }
 
