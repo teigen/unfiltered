@@ -261,6 +261,14 @@ object Unfiltered extends Build {
           ) ++ integrationTestDeps(v)}
         )) dependsOn(library)
 
+  lazy val eventsource =
+    module("event-source")(
+      settings = Seq(
+        description :=
+          "HTML5 Server-Sent events for push API's",
+        libraryDependencies <++= scalaVersion(integrationTestDeps _)
+      )) dependsOn(library)
+
   lazy val websockets =
     module("netty-websockets")(
       settings = Seq(
