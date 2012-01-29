@@ -17,7 +17,7 @@ object UploadSpec extends Specification
 
   def setup = {
     /** Use of a HttpChunkAggregator is mandatory */
-    _.chunked()
+    _.chunked(10485760)
     .handler(netty.async.Planify({
       case r@POST(UFPath("/disk-upload") & MultiPart(req)) => 
         MultiPartParams.Disk(req).files("f") match {
@@ -98,9 +98,10 @@ object UploadSpec extends Specification
       if(out.exists) out.delete
     }
     "handle file uploads written to disk" in {
-      val file = new JFile(getClass.getResource("/netty-upload-big-text-test.txt").toURI)
+      val file = new JFile("/home/nathan/Videos/VID00001.MP4")
       file.exists must_==true
-      http(host / "disk-upload" <<* ("f", file, "text/plain") as_str) must_=="disk read file f named netty-upload-big-text-test.txt with content type text/plain"
+      http(host / "disk-upload" <<* ("f", file, "text/plain") as_str) must_==
+        "disk read file f named netty-upload-big-text-test.txt with content type text/plain"
       http(host / "a" as_str) must_==("http response a")
     }
     "handle writing file uploads written to disk" in {
