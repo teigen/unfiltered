@@ -3,22 +3,32 @@ package unfiltered.directives
 import org.specs._
 
 import unfiltered.request._
+import unfiltered.spec.{jetty, netty}
 
 import java.util.concurrent.atomic.AtomicLong
 
-object DirectivesSpecJetty
-extends unfiltered.spec.jetty.Planned
-with DirectivesSpec
+object DirectiveSpecCycleJetty extends jetty.Planned with CycleSpec
+object DirectiveSpecCycleNetty extends netty.Planned with CycleSpec
+object DirectiveSpecAsyncJetty extends jetty.Served with AsyncSpec {
+  def setup = _.filter(unfiltered.filter.async.Planify(intent))
+}
+object DirectiveSpecAsyncNetty extends netty.Served with AsyncSpec {
+  def setup = _.handler(unfiltered.netty.async.Planify(intent))
+}
 
-object DirectivesSpecNetty
-extends unfiltered.spec.netty.Planned
-with DirectivesSpec
+trait CycleSpec extends DirectivesSpec {
+  lazy val global = cycle
+}
+trait AsyncSpec extends DirectivesSpec {
+  lazy val global = async
+}
 
 trait DirectivesSpec extends unfiltered.spec.Hosted {
   import unfiltered.response._
-  import unfiltered.directives._, Directives._
-
   import dispatch._, Defaults._
+
+  val global:Global
+  import global._
 
   // it's simple to define your own directives
   def contentType(tpe:String) =
@@ -48,45 +58,48 @@ trait DirectivesSpec extends unfiltered.spec.Hosted {
   val MaxPrizes = 3
 
   // limited time offers. expect a side effect!
-  val asPrize = (data.Requiring[Prize]
+  val asPrize = data.Requiring[Prize]
                   .fail(name => BadParam("%s are out of stock".format(name)))
-                  .named("prizes", Some(callers.getAndIncrement()).filter(_ < MaxPrizes).map(Prize(_))))
+                  .named("prizes", Some(callers.getAndIncrement()).filter(_ < MaxPrizes).map(Prize(_)))
 
-  def intent[A,B] = Directive.Intent.Path {
+  def intent[A, B] = Intent.Path {
     case "/affirmation" =>
-      Directive.success {
-        ResponseString("this request needs no validation")
-      }
+      pointed.success(ResponseString("this request needs no validation"))
+
     case "/commit_or" =>
       val a = for {
         _ <- GET
         _ <- commit
-        _ <- failure(BadRequest)
+        _ <- pointed.failure(BadRequest)
       } yield Ok ~> ResponseString("a")
       val b = for {
         _ <- POST
       } yield Ok ~> ResponseString("b")
       a | b
+
     case Seg(List("accept_json", id)) =>
       for {
         _ <- POST
         _ <- contentType("application/json")
         _ <- Accepts.Json
-        r <- request[Any]
+        r <- request
       } yield Ok ~> JsonContent ~> ResponseBytes(Body.bytes(r))
+
     case Seg(List("awesome_json", id)) =>
       for {
         _ <- POST
         _ <- RequestContentType === "application/json" // <-- awesome syntax
         _ <- Accepts.Json
-        r <- request[Any]
+        r <- request
       } yield Ok ~> JsonContent ~> ResponseBytes(Body bytes r)
+
     case Seg(List("limited_offer")) =>
       for {
         prize <- asPrize
       } yield Ok ~> ResponseString(
         "Congratulations. You won prize %d".format(prize.num + 1)
       )
+
     case Seg(List("valid_parameters")) =>
       for {
         optInt <- data.as.Option[Int] named "option_int"
@@ -96,6 +109,7 @@ trait DirectivesSpec extends unfiltered.spec.Hosted {
       } yield Ok ~> ResponseString((
         evenInt + optInt.getOrElse(0) + reqInt
       ).toString)
+
     case Seg(List("independent_parameters")) =>
       for {
         optInt & reqInt & evenInt & _ <-
@@ -108,7 +122,7 @@ trait DirectivesSpec extends unfiltered.spec.Hosted {
       ).toString)
   }
 
-  val someJson = """{"a": 1}"""
+  def someJson = """{"a": 1}"""
 
   def localhost = dispatch.host("127.0.0.1", port)
 
@@ -162,9 +176,9 @@ trait DirectivesSpec extends unfiltered.spec.Hosted {
   }
   "Directives decorated" should {
     "respond with json if accepted" in {
-      val resp = Http(localhost / "awesome_json" / "123"
+      val resp = Http((localhost / "awesome_json" / "123"
         <:< Map("Accept" -> "application/json")
-        <:< Map("Content-Type" -> "application/json")
+        <:< Map("Content-Type" -> "application/json"))
         << someJson OK as.String)
       resp() must_== someJson
     }

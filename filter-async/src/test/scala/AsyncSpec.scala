@@ -10,14 +10,15 @@ object AsyncSpec extends Specification with unfiltered.spec.jetty.Served {
 
   object APlan extends async.Plan  {
     def intent = {
-      case GET(UFPath("/pass")) => Pass
+      case req@GET(UFPath("/pass")) =>
+        req.respond(Pass)
       case req@GET(UFPath("/")) =>
-        req.respond(ResponseString("test") ~> Ok)
+        req.respond(Ok ~> ResponseString("test"))
     }
   }
 
   def setup = _.filter(APlan).filter(Planify {
-    case GET(UFPath("/pass")) => ResponseString("pass") ~> Ok
+    case GET(UFPath("/pass")) => Ok ~> ResponseString("pass")
   })
 
   "An Async Filter Server" should {

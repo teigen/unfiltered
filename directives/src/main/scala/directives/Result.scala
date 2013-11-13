@@ -11,6 +11,12 @@ object Result {
     def map[X](f: R => X):Result[X, A]
     def flatMap[X, AA >: A](f: R => Result[X, AA]):Result[X, AA]
   }
+
+  def merge[A](result:Result[A, A]) = result match {
+    case Success(response) => response
+    case Failure(response) => response
+    case Error(response)   => response
+  }
 }
 
 sealed trait Result[+R, +A] { result =>
@@ -31,19 +37,19 @@ sealed trait Result[+R, +A] { result =>
     case Success(value)  => Success(value)
   }
 
-  def and[B, E, RF](other: => Result[JoiningResponseFunction[E,RF], B])
-    (implicit ev: R <:< JoiningResponseFunction[E,RF])
-    : Result[JoiningResponseFunction[E,RF], (A,B)] = {
+  def and[B, E, RF](other: => Result[JoiningResponseFunction[E, RF], B])
+    (implicit ev: R <:< JoiningResponseFunction[E, RF])
+    : Result[JoiningResponseFunction[E, RF], (A, B)] = {
     (this, other) match {
-      case (Success(a), Success(b)) => Success(a, b)
+      case (Success(a),  Success(b))  => Success(a, b)
       case (Failure(fa), Failure(fb)) => Failure(fa.join(fb))
-      case (Success(a), Failure(fb)) => Failure(fb)
-      case (Failure(fa), Success(b)) => Failure(fa)
-      case (Error(fa), Error(fb)) => Error(fa.join(fb))
-      case (Success(a), Error(fb)) => Error(fb)
-      case (Error(fa), Success(b)) => Error(fa)
-      case (Failure(fa), Error(fb)) => Error(fa.join(fb))
-      case (Error(fa), Failure(fb)) => Error(fa.join(fb))
+      case (Success(a),  Failure(fb)) => Failure(fb)
+      case (Failure(fa), Success(b))  => Failure(fa)
+      case (Error(fa),   Error(fb))   => Error(fa.join(fb))
+      case (Success(a),  Error(fb))   => Error(fb)
+      case (Error(fa),   Success(b))  => Error(fa)
+      case (Failure(fa), Error(fb))   => Error(fa.join(fb))
+      case (Error(fa),   Failure(fb)) => Error(fa.join(fb))
     }
   }
 

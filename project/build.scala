@@ -91,7 +91,7 @@ object Unfiltered extends Build {
   lazy val netty = module("netty")().dependsOn(library)
 
   lazy val specHelpers =
-    module("spec")().dependsOn(filters, jetty, nettyServer)
+    module("spec")().dependsOn(filters, filtersAsync, jetty, nettyServer)
 
   lazy val specs2Helpers =
     module("specs2")().dependsOn(filters, jetty, nettyServer)
